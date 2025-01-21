@@ -2830,39 +2830,45 @@ exit:
 
 RESULT eServiceMP3::enableSubtitles(iSubtitleUser *user, struct SubtitleTrack &track)
 {
-	if (m_currentSubtitleStream != track.pid)
+	int m_subtitleStreams_size = int(m_subtitleStreams.size());
+	if (track.pid > m_subtitleStreams_size || track.pid < 1)
 	{
-		g_object_set (G_OBJECT (m_gst_playbin), "current-text", -1, NULL);
-		m_subtitle_sync_timer->stop();
-		m_subtitle_pages.clear();
-		m_prev_decoder_time = -1;
-		m_decoder_time_valid_state = 0;
-		m_currentSubtitleStream = track.pid;
-		m_cachedSubtitleStream = m_currentSubtitleStream;
-		setCacheEntry(false, track.pid);
-		g_object_set (G_OBJECT (m_gst_playbin), "current-text", m_currentSubtitleStream, NULL);
+		return -1;
+	}
+	eDebug ("[eServiceMP3][enableSubtitles] entered: subtitle stream %i track.pid %i", m_currentSubtitleStream, track.pid - 1);
+	g_object_set (G_OBJECT (m_gst_playbin), "current-text", -1, NULL);
+	m_subtitle_sync_timer->stop();
+	m_dvb_subtitle_sync_timer->stop();
+	m_dvb_subtitle_pages.clear();
+	m_subtitle_pages.clear();
+	m_prev_decoder_time = -1;
+	m_decoder_time_valid_state = 0;
+	m_currentSubtitleStream = track.pid - 1;
+	m_cachedSubtitleStream = m_currentSubtitleStream;
+	setCacheEntry(false, track.pid - 1);
+	g_object_set (G_OBJECT (m_gst_playbin), "current-text", m_currentSubtitleStream, NULL);
 
-		m_subtitle_widget = user;
-
-		if (track.type != stDVB)
+	if (track.type != stDVB)
+	{
+		bool validposition = false;
+		pts_t ppos = 0;
+		if (getPlayPosition(ppos) >= 0)
 		{
-			bool validposition = false;
-			pts_t ppos = 0;
-			if (getPlayPosition(ppos) >= 0)
-			{
-				validposition = true;
-				ppos -= 100;
-				if (ppos < 0)
-					ppos = 0;
-			}
-			if (validposition)
-			{
-				/* flush */
-				seekTo(ppos);
-			}
+			validposition = true;
+			ppos -= 100;
+			if (ppos < 0)
+				ppos = 0;
 		}
+		if (validposition)
+		{
+			/* flush */
+			seekTo(ppos);
+		}
+	}
 
-		eDebug ("[eServiceMP3] switched to subtitle stream %i", m_currentSubtitleStream);
+	m_subtitle_widget = user;
+
+	eDebug ("[eServiceMP3] switched to subtitle stream %i", m_currentSubtitleStream);
 
 #ifdef GSTREAMER_SUBTITLE_SYNC_MODE_BUG
 		/*
@@ -2871,7 +2877,6 @@ RESULT eServiceMP3::enableSubtitles(iSubtitleUser *user, struct SubtitleTrack &t
 		 */
 		seekRelative(-1, 90000);
 #endif
-	}
 
 	return 0;
 }
@@ -2884,7 +2889,9 @@ RESULT eServiceMP3::disableSubtitles()
 	setCacheEntry(false, -1);
 	g_object_set (G_OBJECT (m_gst_playbin), "current-text", m_currentSubtitleStream, NULL);
 	m_subtitle_sync_timer->stop();
+	m_dvb_subtitle_sync_timer->stop();
 	m_subtitle_pages.clear();
+	m_dvb_subtitle_pages.clear();
 	m_prev_decoder_time = -1;
 	m_decoder_time_valid_state = 0;
 	if (m_subtitle_widget) m_subtitle_widget->destroy();
