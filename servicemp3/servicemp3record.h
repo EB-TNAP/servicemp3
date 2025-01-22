@@ -12,7 +12,7 @@ class eServiceMP3Record:
 {
 	DECLARE_REF(eServiceMP3Record);
 public:
-	RESULT connectEvent(const sigc::slot2<void,iRecordableService*,int> &event, ePtr<eConnection> &connection);
+	RESULT connectEvent(const sigc::slot<void(iRecordableService*,int)> &event, ePtr<eConnection> &connection);
 	RESULT prepare(const char *filename, time_t begTime, time_t endTime, int eit_event_id, const char *name, const char *descr, const char *tags, bool descramble, bool recordecm, int packetsize);
 	RESULT prepareStreaming(bool descramble, bool includeecm);
 	RESULT start(bool simulate=false);
@@ -22,6 +22,9 @@ public:
 	RESULT frontendInfo(ePtr<iFrontendInformation> &ptr);
 	RESULT subServices(ePtr<iSubserviceList> &ptr);
 	RESULT getFilenameExtension(std::string &ext) { ext = ".stream"; return 0; };
+
+	// Add the missing method declaration
+	void restartRecordingFromEos();
 
 private:
 	enum { stateIdle, statePrepared, stateRecording };
@@ -33,7 +36,6 @@ private:
 	std::string m_filename;
 	eServiceReference m_ref;
 	ePtr<eConnection> m_con_record_event;
-	ePtr<eTimer> m_streamingsrc_timeout;
 	std::string m_useragent;
 	std::string m_extra_headers;
 	eFixedMessagePump<ePtr<GstMessageContainer> > m_pump;
@@ -54,7 +56,7 @@ private:
 	static gboolean handleAutoPlugCont(GstElement *bin, GstPad *pad, GstCaps *caps, gpointer user_data);
 
 			/* events */
-	sigc::signal2<void,iRecordableService*,int> m_event;
+	sigc::signal<void(iRecordableService*,int)> m_event;
 };
 
 #endif
