@@ -23,6 +23,9 @@ public:
 	RESULT subServices(ePtr<iSubserviceList> &ptr);
 	RESULT getFilenameExtension(std::string &ext) { ext = ".stream"; return 0; };
 
+	// Add the missing method declaration
+	void restartRecordingFromEos();
+
 private:
 	enum { stateIdle, statePrepared, stateRecording };
 	GstElement* m_recording_pipeline;
